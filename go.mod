@@ -1,4 +1,4 @@
-module github.com/google/nftables
+module github.com/SewanDevs/nftables
 
 go 1.12
 

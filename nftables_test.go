@@ -24,9 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/nftables"
-	"github.com/google/nftables/binaryutil"
-	"github.com/google/nftables/expr"
+	"github.com/SewanDevs/nftables"
+	"github.com/SewanDevs/nftables/binaryutil"
+	"github.com/SewanDevs/nftables/expr"
 	"github.com/mdlayher/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"

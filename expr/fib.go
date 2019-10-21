@@ -17,7 +17,7 @@ package expr
 import (
 	"encoding/binary"
 
-	"github.com/google/nftables/binaryutil"
+	"github.com/SewanDevs/nftables/binaryutil"
 	"github.com/mdlayher/netlink"
 	"golang.org/x/sys/unix"
 )
