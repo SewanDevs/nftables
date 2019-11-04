@@ -408,7 +408,6 @@ func setsFromMsg(msg netlink.Message) (*Set, error) {
 		switch ad.Type() {
 		case unix.NFTA_SET_NAME:
 			set.Name = ad.String()
-			fmt.Printf("Discover set %s\n", set.Name)
 		case unix.NFTA_SET_ID:
 			set.ID = binary.BigEndian.Uint32(ad.Bytes())
 		case unix.NFTA_SET_FLAGS:
