@@ -151,6 +151,8 @@ const (
 	NF_NAT_RANGE_PROTO_RANDOM_FULLY = 0x10
 	// NF_NAT_RANGE_PERSISTENT defines flag for a persistent masquerade
 	NF_NAT_RANGE_PERSISTENT = 0x8
+	// NF_NAT_RANGE_NETMAP defines flag for NETMAP iptables target
+	NF_NAT_RANGE_NETMAP = 0x40
 )
 
 func (e *Masq) marshal() ([]byte, error) {
