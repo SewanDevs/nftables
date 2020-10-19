@@ -18,7 +18,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/netlink"
 	"golang.org/x/sys/unix"
 )
 

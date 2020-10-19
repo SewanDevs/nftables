@@ -19,7 +19,7 @@ import (
 	"encoding/binary"
 
 	"github.com/SewanDevs/nftables/binaryutil"
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/netlink"
 	"golang.org/x/sys/unix"
 )
 

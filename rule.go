@@ -20,7 +20,7 @@ import (
 
 	"github.com/SewanDevs/nftables/binaryutil"
 	"github.com/SewanDevs/nftables/expr"
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/netlink"
 	"golang.org/x/sys/unix"
 )
 

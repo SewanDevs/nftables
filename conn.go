@@ -18,8 +18,8 @@ import (
 	"fmt"
 
 	"github.com/SewanDevs/nftables/expr"
-	"github.com/mdlayher/netlink"
-	"github.com/mdlayher/netlink/nltest"
+	"github.com/SewanDevs/netlink"
+	"github.com/SewanDevs/netlink/nltest"
 	"golang.org/x/sys/unix"
 )
 
