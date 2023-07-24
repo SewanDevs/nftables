@@ -3,8 +3,8 @@ package nftables
 import (
 	"testing"
 
-	"github.com/google/nftables/expr"
-	"github.com/google/nftables/xt"
+	"github.com/SewanDevs/nftables/expr"
+	"github.com/SewanDevs/nftables/xt"
 	"golang.org/x/sys/unix"
 )
 

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/netlink"
 	"golang.org/x/sys/unix"
 )
 

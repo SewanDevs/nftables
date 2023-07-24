@@ -3,7 +3,7 @@ package nftables
 import (
 	"fmt"
 
-	"github.com/google/nftables/expr"
+	"github.com/SewanDevs/nftables/expr"
 	"golang.org/x/sys/unix"
 )
 

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/google/nftables/binaryutil"
+	"github.com/SewanDevs/nftables/binaryutil"
 )
 
 // ErrEOF signals trying to read beyond the available payload information.

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/nftables"
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/nftables"
+	"github.com/SewanDevs/netlink"
 )
 
 // Recorder provides an nftables connection that does not send to the Linux

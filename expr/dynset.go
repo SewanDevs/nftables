@@ -18,9 +18,9 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/google/nftables/binaryutil"
-	"github.com/google/nftables/internal/parseexprfunc"
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/nftables/binaryutil"
+	"github.com/SewanDevs/nftables/internal/parseexprfunc"
+	"github.com/SewanDevs/netlink"
 	"golang.org/x/sys/unix"
 )
 

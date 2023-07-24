@@ -19,8 +19,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/google/nftables/binaryutil"
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/nftables/binaryutil"
+	"github.com/SewanDevs/netlink"
 )
 
 type Socket struct {

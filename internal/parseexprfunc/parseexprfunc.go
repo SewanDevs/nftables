@@ -1,7 +1,7 @@
 package parseexprfunc
 
 import (
-	"github.com/mdlayher/netlink"
+	"github.com/SewanDevs/netlink"
 )
 
 var (
