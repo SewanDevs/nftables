@@ -15,6 +15,7 @@
 package expr
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -37,9 +38,14 @@ type Verdict struct {
 
 type VerdictKind int64
 
-// Verdicts, as per netfilter.h.
+// Verdicts, as per netfilter.h and netfilter/nf_tables.h.
 const (
-	VerdictDrop VerdictKind = iota
+	VerdictReturn VerdictKind = iota - 5
+	VerdictGoto
+	VerdictJump
+	VerdictBreak
+	VerdictContinue
+	VerdictDrop
 	VerdictAccept
 	VerdictStolen
 	VerdictQueue
@@ -47,7 +53,7 @@ const (
 	VerdictStop
 )
 
-func (e *Verdict) marshal() ([]byte, error) {
+func (e *Verdict) marshal(fam byte) ([]byte, error) {
 	// A verdict is a tree of netlink attributes structured as follows:
 	// NFTA_LIST_ELEM | NLA_F_NESTED {
 	//   NFTA_EXPR_NAME { "immediate\x00" }
@@ -90,11 +96,12 @@ func (e *Verdict) marshal() ([]byte, error) {
 	})
 }
 
-func (e *Verdict) unmarshal(data []byte) error {
+func (e *Verdict) unmarshal(fam byte, data []byte) error {
 	ad, err := netlink.NewAttributeDecoder(data)
 	if err != nil {
 		return err
 	}
+
 	ad.ByteOrder = binary.BigEndian
 	for ad.Next() {
 		switch ad.Type() {
@@ -106,7 +113,10 @@ func (e *Verdict) unmarshal(data []byte) error {
 			for nestedAD.Next() {
 				switch nestedAD.Type() {
 				case unix.NFTA_DATA_VERDICT:
-					e.Kind = VerdictKind(binaryutil.BigEndian.Uint32(nestedAD.Bytes()[4:]))
+					e.Kind = VerdictKind(int32(binaryutil.BigEndian.Uint32(nestedAD.Bytes()[4:8])))
+					if len(nestedAD.Bytes()) > 12 {
+						e.Chain = string(bytes.Trim(nestedAD.Bytes()[12:], "\x00"))
+					}
 				}
 			}
 			if nestedAD.Err() != nil {

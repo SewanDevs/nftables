@@ -16,6 +16,7 @@
 package binaryutil
 
 import (
+	"bytes"
 	"encoding/binary"
 	"unsafe"
 )
@@ -26,6 +27,7 @@ type ByteOrder interface {
 	PutUint16(v uint16) []byte
 	PutUint32(v uint32) []byte
 	PutUint64(v uint64) []byte
+	Uint16(b []byte) uint16
 	Uint32(b []byte) uint32
 	Uint64(b []byte) uint64
 }
@@ -52,6 +54,10 @@ func (nativeEndian) PutUint64(v uint64) []byte {
 	buf := make([]byte, 8)
 	*(*uint64)(unsafe.Pointer(&buf[0])) = v
 	return buf
+}
+
+func (nativeEndian) Uint16(b []byte) uint16 {
+	return *(*uint16)(unsafe.Pointer(&b[0]))
 }
 
 func (nativeEndian) Uint32(b []byte) uint32 {
@@ -86,10 +92,34 @@ func (bigEndian) PutUint64(v uint64) []byte {
 	return buf
 }
 
+func (bigEndian) Uint16(b []byte) uint16 {
+	return binary.BigEndian.Uint16(b)
+}
+
 func (bigEndian) Uint32(b []byte) uint32 {
 	return binary.BigEndian.Uint32(b)
 }
 
 func (bigEndian) Uint64(b []byte) uint64 {
 	return binary.BigEndian.Uint64(b)
+}
+
+// For dealing with types not supported by the encoding/binary interface
+
+func PutInt32(v int32) []byte {
+	buf := make([]byte, 4)
+	*(*int32)(unsafe.Pointer(&buf[0])) = v
+	return buf
+}
+
+func Int32(b []byte) int32 {
+	return *(*int32)(unsafe.Pointer(&b[0]))
+}
+
+func PutString(s string) []byte {
+	return []byte(s)
+}
+
+func String(b []byte) string {
+	return string(bytes.TrimRight(b, "\x00"))
 }

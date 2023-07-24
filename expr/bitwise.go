@@ -15,7 +15,7 @@
 package expr
 
 import (
-	"fmt"
+	"encoding/binary"
 
 	"github.com/SewanDevs/nftables/binaryutil"
 	"github.com/SewanDevs/netlink"
@@ -30,7 +30,7 @@ type Bitwise struct {
 	Xor            []byte
 }
 
-func (e *Bitwise) marshal() ([]byte, error) {
+func (e *Bitwise) marshal(fam byte) ([]byte, error) {
 	mask, err := netlink.MarshalAttributes([]netlink.Attribute{
 		{Type: unix.NFTA_DATA_VALUE, Data: e.Mask},
 	})
@@ -60,6 +60,43 @@ func (e *Bitwise) marshal() ([]byte, error) {
 	})
 }
 
-func (e *Bitwise) unmarshal(data []byte) error {
-	return fmt.Errorf("not yet implemented")
+func (e *Bitwise) unmarshal(fam byte, data []byte) error {
+	ad, err := netlink.NewAttributeDecoder(data)
+	if err != nil {
+		return err
+	}
+	ad.ByteOrder = binary.BigEndian
+	for ad.Next() {
+		switch ad.Type() {
+		case unix.NFTA_BITWISE_SREG:
+			e.SourceRegister = ad.Uint32()
+		case unix.NFTA_BITWISE_DREG:
+			e.DestRegister = ad.Uint32()
+		case unix.NFTA_BITWISE_LEN:
+			e.Len = ad.Uint32()
+		case unix.NFTA_BITWISE_MASK:
+			// Since NFTA_BITWISE_MASK is nested, it requires additional decoding
+			ad.Nested(func(nad *netlink.AttributeDecoder) error {
+				for nad.Next() {
+					switch nad.Type() {
+					case unix.NFTA_DATA_VALUE:
+						e.Mask = nad.Bytes()
+					}
+				}
+				return nil
+			})
+		case unix.NFTA_BITWISE_XOR:
+			// Since NFTA_BITWISE_XOR is nested, it requires additional decoding
+			ad.Nested(func(nad *netlink.AttributeDecoder) error {
+				for nad.Next() {
+					switch nad.Type() {
+					case unix.NFTA_DATA_VALUE:
+						e.Xor = nad.Bytes()
+					}
+				}
+				return nil
+			})
+		}
+	}
+	return ad.Err()
 }

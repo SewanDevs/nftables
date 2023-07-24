@@ -1,9 +1,17 @@
 module github.com/SewanDevs/nftables
 
-go 1.12
+go 1.17
 
 require (
-	github.com/SewanDevs/netlink v1.1.2
+	github.com/SewanDevs/netlink v1.7.1
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc
-	golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5
+	golang.org/x/sys v0.5.0
+)
+
+require (
+	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/josharian/native v1.0.0 // indirect
+	github.com/mdlayher/socket v0.4.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 )
