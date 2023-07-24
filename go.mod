@@ -1,6 +1,6 @@
 module github.com/SewanDevs/nftables
 
-go 1.17
+go 1.15
 
 require (
 	github.com/SewanDevs/netlink v0.0.0-20230724144502-ec3592b2587a
