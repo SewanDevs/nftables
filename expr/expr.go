@@ -19,24 +19,157 @@ import (
 	"encoding/binary"
 
 	"github.com/SewanDevs/nftables/binaryutil"
+	"github.com/SewanDevs/nftables/internal/parseexprfunc"
 	"github.com/SewanDevs/netlink"
 	"golang.org/x/sys/unix"
 )
 
+func init() {
+	parseexprfunc.ParseExprBytesFunc = func(fam byte, ad *netlink.AttributeDecoder, b []byte) ([]interface{}, error) {
+		exprs, err := exprsFromBytes(fam, ad, b)
+		if err != nil {
+			return nil, err
+		}
+		result := make([]interface{}, len(exprs))
+		for idx, expr := range exprs {
+			result[idx] = expr
+		}
+		return result, nil
+	}
+	parseexprfunc.ParseExprMsgFunc = func(fam byte, b []byte) ([]interface{}, error) {
+		ad, err := netlink.NewAttributeDecoder(b)
+		if err != nil {
+			return nil, err
+		}
+		ad.ByteOrder = binary.BigEndian
+		var exprs []interface{}
+		for ad.Next() {
+			e, err := parseexprfunc.ParseExprBytesFunc(fam, ad, b)
+			if err != nil {
+				return e, err
+			}
+			exprs = append(exprs, e...)
+		}
+		return exprs, ad.Err()
+	}
+}
+
 // Marshal serializes the specified expression into a byte slice.
-func Marshal(e Any) ([]byte, error) {
-	return e.marshal()
+func Marshal(fam byte, e Any) ([]byte, error) {
+	return e.marshal(fam)
 }
 
 // Unmarshal fills an expression from the specified byte slice.
-func Unmarshal(data []byte, e Any) error {
-	return e.unmarshal(data)
+func Unmarshal(fam byte, data []byte, e Any) error {
+	return e.unmarshal(fam, data)
+}
+
+// exprsFromBytes parses nested raw expressions bytes
+// to construct nftables expressions
+func exprsFromBytes(fam byte, ad *netlink.AttributeDecoder, b []byte) ([]Any, error) {
+	var exprs []Any
+	ad.Do(func(b []byte) error {
+		ad, err := netlink.NewAttributeDecoder(b)
+		if err != nil {
+			return err
+		}
+		ad.ByteOrder = binary.BigEndian
+		var name string
+		for ad.Next() {
+			switch ad.Type() {
+			case unix.NFTA_EXPR_NAME:
+				name = ad.String()
+				if name == "notrack" {
+					e := &Notrack{}
+					exprs = append(exprs, e)
+				}
+			case unix.NFTA_EXPR_DATA:
+				var e Any
+				switch name {
+				case "ct":
+					e = &Ct{}
+				case "range":
+					e = &Range{}
+				case "meta":
+					e = &Meta{}
+				case "cmp":
+					e = &Cmp{}
+				case "counter":
+					e = &Counter{}
+				case "objref":
+					e = &Objref{}
+				case "payload":
+					e = &Payload{}
+				case "lookup":
+					e = &Lookup{}
+				case "immediate":
+					e = &Immediate{}
+				case "bitwise":
+					e = &Bitwise{}
+				case "redir":
+					e = &Redir{}
+				case "nat":
+					e = &NAT{}
+				case "limit":
+					e = &Limit{}
+				case "quota":
+					e = &Quota{}
+				case "dynset":
+					e = &Dynset{}
+				case "log":
+					e = &Log{}
+				case "exthdr":
+					e = &Exthdr{}
+				case "match":
+					e = &Match{}
+				case "target":
+					e = &Target{}
+				case "connlimit":
+					e = &Connlimit{}
+				case "queue":
+					e = &Queue{}
+				case "flow_offload":
+					e = &FlowOffload{}
+				case "reject":
+					e = &Reject{}
+				case "masq":
+					e = &Masq{}
+				case "hash":
+					e = &Hash{}
+				}
+				if e == nil {
+					// TODO: introduce an opaque expression type so that users know
+					// something is here.
+					continue // unsupported expression type
+				}
+
+				ad.Do(func(b []byte) error {
+					if err := Unmarshal(fam, b, e); err != nil {
+						return err
+					}
+					// Verdict expressions are a special-case of immediate expressions, so
+					// if the expression is an immediate writing nothing into the verdict
+					// register (invalid), re-parse it as a verdict expression.
+					if imm, isImmediate := e.(*Immediate); isImmediate && imm.Register == unix.NFT_REG_VERDICT && len(imm.Data) == 0 {
+						e = &Verdict{}
+						if err := Unmarshal(fam, b, e); err != nil {
+							return err
+						}
+					}
+					exprs = append(exprs, e)
+					return nil
+				})
+			}
+		}
+		return ad.Err()
+	})
+	return exprs, ad.Err()
 }
 
 // Any is an interface implemented by any expression type.
 type Any interface {
-	marshal() ([]byte, error)
-	unmarshal([]byte) error
+	marshal(fam byte) ([]byte, error)
+	unmarshal(fam byte, data []byte) error
 }
 
 // MetaKey specifies which piece of meta information should be loaded. See also
@@ -80,7 +213,7 @@ type Meta struct {
 	Register       uint32
 }
 
-func (e *Meta) marshal() ([]byte, error) {
+func (e *Meta) marshal(fam byte) ([]byte, error) {
 	regData := []byte{}
 	exprData, err := netlink.MarshalAttributes(
 		[]netlink.Attribute{
@@ -114,7 +247,7 @@ func (e *Meta) marshal() ([]byte, error) {
 	})
 }
 
-func (e *Meta) unmarshal(data []byte) error {
+func (e *Meta) unmarshal(fam byte, data []byte) error {
 	ad, err := netlink.NewAttributeDecoder(data)
 	if err != nil {
 		return err
@@ -122,6 +255,9 @@ func (e *Meta) unmarshal(data []byte) error {
 	ad.ByteOrder = binary.BigEndian
 	for ad.Next() {
 		switch ad.Type() {
+		case unix.NFTA_META_SREG:
+			e.Register = ad.Uint32()
+			e.SourceRegister = true
 		case unix.NFTA_META_DREG:
 			e.Register = ad.Uint32()
 		case unix.NFTA_META_KEY:
@@ -155,7 +291,7 @@ const (
 	NF_NAT_RANGE_NETMAP = 0x40
 )
 
-func (e *Masq) marshal() ([]byte, error) {
+func (e *Masq) marshal(fam byte) ([]byte, error) {
 	msgData := []byte{}
 	if !e.ToPorts {
 		flags := uint32(0)
@@ -198,7 +334,7 @@ func (e *Masq) marshal() ([]byte, error) {
 	})
 }
 
-func (e *Masq) unmarshal(data []byte) error {
+func (e *Masq) unmarshal(fam byte, data []byte) error {
 	ad, err := netlink.NewAttributeDecoder(data)
 	if err != nil {
 		return err
@@ -207,6 +343,7 @@ func (e *Masq) unmarshal(data []byte) error {
 	for ad.Next() {
 		switch ad.Type() {
 		case unix.NFTA_MASQ_REG_PROTO_MIN:
+			e.ToPorts = true
 			e.RegProtoMin = ad.Uint32()
 		case unix.NFTA_MASQ_REG_PROTO_MAX:
 			e.RegProtoMax = ad.Uint32()
@@ -240,7 +377,7 @@ type Cmp struct {
 	Data     []byte
 }
 
-func (e *Cmp) marshal() ([]byte, error) {
+func (e *Cmp) marshal(fam byte) ([]byte, error) {
 	cmpData, err := netlink.MarshalAttributes([]netlink.Attribute{
 		{Type: unix.NFTA_DATA_VALUE, Data: e.Data},
 	})
@@ -261,7 +398,7 @@ func (e *Cmp) marshal() ([]byte, error) {
 	})
 }
 
-func (e *Cmp) unmarshal(data []byte) error {
+func (e *Cmp) unmarshal(fam byte, data []byte) error {
 	ad, err := netlink.NewAttributeDecoder(data)
 	if err != nil {
 		return err
