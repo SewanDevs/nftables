@@ -19,7 +19,6 @@ import (
 
 	"github.com/SewanDevs/netlink"
 	"github.com/SewanDevs/nftables/binaryutil"
-	"github.com/SewanDevs/netlink"
 	"golang.org/x/sys/unix"
 )
 
