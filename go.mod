@@ -3,7 +3,7 @@ module github.com/SewanDevs/nftables
 go 1.17
 
 require (
-	github.com/SewanDevs/netlink v0.0.0-20221212131412-0de348364801
+	github.com/SewanDevs/netlink v0.0.0-20230724144502-ec3592b2587a
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc
 	golang.org/x/sys v0.5.0
 )
