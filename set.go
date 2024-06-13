@@ -18,11 +18,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/SewanDevs/nftables/expr"
 
-	"github.com/SewanDevs/nftables/binaryutil"
 	"github.com/SewanDevs/netlink"
+	"github.com/SewanDevs/nftables/binaryutil"
 	"golang.org/x/sys/unix"
 )
 
@@ -66,13 +67,15 @@ var (
 // Set represents an nftables set. Anonymous sets are only valid within the
 // context of a single batch.
 type Set struct {
-	Table     *Table
-	ID        uint32
-	Name      string
-	Anonymous bool
-	Constant  bool
-	Interval  bool
-	IsMap     bool
+	Table      *Table
+	ID         uint32
+	Name       string
+	Anonymous  bool
+	Constant   bool
+	Interval   bool
+	IsMap      bool
+	HasTimeout bool
+	Timeout    time.Duration
 
 	KeyType  SetDatatype
 	DataType SetDatatype
@@ -87,6 +90,8 @@ type SetElement struct {
 	// If IsMap is true and VerdictData is not nil, then Val of SetElement will be ignored
 	// and VerdictData will be wrapped into Attribute data.
 	VerdictData *expr.Verdict
+	Timeout     time.Duration
+	Expires     time.Duration
 }
 
 func (s *SetElement) decode() func(b []byte) error {
@@ -112,6 +117,10 @@ func (s *SetElement) decode() func(b []byte) error {
 			case unix.NFTA_SET_ELEM_FLAGS:
 				flags := ad.Uint32()
 				s.IntervalEnd = (flags & unix.NFT_SET_ELEM_INTERVAL_END) != 0
+			case unix.NFTA_SET_ELEM_TIMEOUT:
+				s.Timeout = time.Millisecond * time.Duration(ad.Uint64())
+			case unix.NFTA_SET_ELEM_EXPIRATION:
+				s.Expires = time.Millisecond * time.Duration(ad.Uint64())
 			}
 		}
 		return ad.Err()
@@ -272,6 +281,9 @@ func (cc *Conn) AddSet(s *Set, vals []SetElement) error {
 	if s.IsMap {
 		flags |= unix.NFT_SET_MAP
 	}
+	if s.HasTimeout {
+		flags |= unix.NFT_SET_TIMEOUT
+	}
 
 	tableInfo := []netlink.Attribute{
 		{Type: unix.NFTA_SET_TABLE, Data: []byte(s.Table.Name + "\x00")},
@@ -291,6 +303,9 @@ func (cc *Conn) AddSet(s *Set, vals []SetElement) error {
 			tableInfo = append(tableInfo, netlink.Attribute{Type: unix.NFTA_SET_DATA_TYPE, Data: binaryutil.BigEndian.PutUint32(s.DataType.nftMagic)},
 				netlink.Attribute{Type: unix.NFTA_SET_DATA_LEN, Data: binaryutil.BigEndian.PutUint32(s.DataType.Bytes)})
 		}
+	}
+	if s.HasTimeout && s.Timeout != 0 {
+		tableInfo = append(tableInfo, netlink.Attribute{Type: unix.NFTA_SET_TIMEOUT, Data: binaryutil.BigEndian.PutUint64(uint64(s.Timeout.Milliseconds()))})
 	}
 	if s.Constant {
 		// nft cli tool adds the number of elements to set/map's descriptor
@@ -410,12 +425,16 @@ func setsFromMsg(msg netlink.Message) (*Set, error) {
 			set.Name = ad.String()
 		case unix.NFTA_SET_ID:
 			set.ID = binary.BigEndian.Uint32(ad.Bytes())
+		case unix.NFTA_SET_TIMEOUT:
+			set.Timeout = time.Duration(time.Millisecond * time.Duration(binary.BigEndian.Uint64(ad.Bytes())))
+			set.HasTimeout = true
 		case unix.NFTA_SET_FLAGS:
 			flags := ad.Uint32()
 			set.Constant = (flags & unix.NFT_SET_CONSTANT) != 0
 			set.Anonymous = (flags & unix.NFT_SET_ANONYMOUS) != 0
 			set.Interval = (flags & unix.NFT_SET_INTERVAL) != 0
 			set.IsMap = (flags & unix.NFTA_SET_TABLE) != 0
+			set.HasTimeout = (flags & unix.NFTA_SET_TIMEOUT) != 0
 		case unix.NFTA_SET_KEY_TYPE:
 			nftMagic := ad.Uint32()
 			for _, dt := range nftDatatypes {
