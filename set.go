@@ -443,7 +443,12 @@ func setsFromMsg(msg netlink.Message) (*Set, error) {
 					break
 				}
 			}
-			if set.KeyType.nftMagic == 0 {
+			// 29516 = 734c = ipv4_addr . inet_service . inet_proto
+			// 33612 = 834c = ipv6_addr . inet_service . inet_proto
+			// Literally just a dirty fix because backporting the whole type concat feature is
+			// too heavy to do, so we ignore errors on known concatenated key types from
+			// dpi-balancer
+			if set.KeyType.nftMagic == 0 && nftMagic != 29516 && nftMagic != 33612 {
 				return nil, fmt.Errorf("could not determine key type %x", nftMagic)
 			}
 		case unix.NFTA_SET_DATA_TYPE:
